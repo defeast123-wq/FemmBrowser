@@ -7,15 +7,22 @@ const {
 
 const path = require("path");
 
-let win;
-let uiView;
+let win = null;
+let uiView = null;
 
 const tabs = [];
 let activeTab = null;
 let nextTabId = 1;
 
+const CHROME_HEIGHT = 100;
+
 const HOME_PAGE =
     "file://" + path.join(__dirname, "index.html");
+
+
+// ========================================
+// CREATE WINDOW
+// ========================================
 
 function createWindow() {
 
@@ -26,7 +33,7 @@ function createWindow() {
         minHeight: 600
     });
 
-    // Browser UI
+    // Browser toolbar
     uiView = new WebContentsView({
         webPreferences: {
             preload: path.join(__dirname, "preload.js"),
@@ -37,25 +44,40 @@ function createWindow() {
 
     win.contentView.addChildView(uiView);
 
-    uiView.setBounds({
-        x: 0,
-        y: 0,
-        width: 1400,
-        height: 100
-    });
-
     uiView.webContents.loadFile(
         path.join(__dirname, "chrome.html")
     );
 
+    updateBounds();
+
+    // Create first tab
     createTab();
 
-    win.on("resize", updateBounds);
+    // Resize everything when window changes size
+    win.on("resize", () => {
+        updateBounds();
+    });
 
     win.on("closed", () => {
+
+        for (const tab of tabs) {
+            try {
+                tab.view.webContents.close();
+            } catch {}
+        }
+
+        tabs.length = 0;
+
+        activeTab = null;
+        uiView = null;
         win = null;
     });
 }
+
+
+// ========================================
+// UPDATE WINDOW / TAB SIZES
+// ========================================
 
 function updateBounds() {
 
@@ -64,26 +86,43 @@ function updateBounds() {
 
     const bounds = win.getBounds();
 
-    uiView.setBounds({
-        x: 0,
-        y: 0,
-        width: bounds.width,
-        height: 100
-    });
+    // Toolbar
+    if (uiView) {
 
-    tabs.forEach(tab => {
+        uiView.setBounds({
+            x: 0,
+            y: 0,
+            width: bounds.width,
+            height: CHROME_HEIGHT
+        });
+
+    }
+
+    // Browser pages
+    for (const tab of tabs) {
 
         tab.view.setBounds({
             x: 0,
-            y: 100,
+            y: CHROME_HEIGHT,
             width: bounds.width,
-            height: bounds.height - 100
+            height: Math.max(
+                1,
+                bounds.height - CHROME_HEIGHT
+            )
         });
 
-    });
+    }
 }
 
+
+// ========================================
+// CREATE TAB
+// ========================================
+
 function createTab(url = HOME_PAGE) {
+
+    if (!win)
+        return;
 
     const id = nextTabId++;
 
@@ -95,100 +134,121 @@ function createTab(url = HOME_PAGE) {
         }
     });
 
+    const tab = {
+        id: id,
+        view: view,
+        title: "New Tab",
+        url: url
+    };
+
+    tabs.push(tab);
+
     win.contentView.addChildView(view);
 
-    tabs.push({
-        id,
-        view,
-        title: "New Tab",
-        url
-    });
+    updateBounds();
 
-    view.setBounds({
-        x: 0,
-        y: 100,
-        width: win.getBounds().width,
-        height: win.getBounds().height - 100
-    });
-
-    view.webContents.loadURL(url);
-
+    // Page title changed
     view.webContents.on(
         "page-title-updated",
         (_event, title) => {
 
-            const tab = tabs.find(t => t.id === id);
+            tab.title =
+                title ||
+                "New Tab";
 
-            if (tab) {
-                tab.title = title;
-                sendTabs();
-            }
-
+            sendTabs();
         }
     );
 
+    // Normal navigation
     view.webContents.on(
         "did-navigate",
-        (_event, url) => {
+        (_event, newUrl) => {
 
-            const tab = tabs.find(t => t.id === id);
+            tab.url = newUrl;
 
-            if (tab) {
-                tab.url = url;
-
-                if (tab.id === activeTab) {
-                    sendState(tab);
-                }
+            if (tab.id === activeTab) {
+                sendState(tab);
             }
 
         }
     );
 
+    // In-page navigation
     view.webContents.on(
         "did-navigate-in-page",
-        (_event, url) => {
+        (_event, newUrl) => {
 
-            const tab = tabs.find(t => t.id === id);
+            tab.url = newUrl;
 
-            if (tab) {
-                tab.url = url;
-
-                if (tab.id === activeTab) {
-                    sendState(tab);
-                }
+            if (tab.id === activeTab) {
+                sendState(tab);
             }
 
         }
     );
 
+    // Page finished loading
+    view.webContents.on(
+        "did-finish-load",
+        () => {
+
+            const currentUrl =
+                view.webContents.getURL();
+
+            if (currentUrl) {
+                tab.url = currentUrl;
+            }
+
+            if (tab.id === activeTab) {
+                sendState(tab);
+            }
+
+            sendTabs();
+        }
+    );
+
+    // Load page
+    view.webContents.loadURL(url);
+
+    // Make this tab active
     switchTab(id);
 }
 
+
+// ========================================
+// SWITCH TAB
+// ========================================
+
 function switchTab(id) {
 
-    const tab = tabs.find(t => t.id === id);
+    if (!win)
+        return;
+
+    const tab = tabs.find(
+        t => t.id === id
+    );
 
     if (!tab)
         return;
 
-    tabs.forEach(t => {
+    // Remove browser pages
+    for (const otherTab of tabs) {
 
         try {
-            win.contentView.removeChildView(t.view);
+            win.contentView.removeChildView(
+                otherTab.view
+            );
         } catch {}
 
-    });
+    }
 
-    win.contentView.addChildView(tab.view);
+    // Put selected page back
+    win.contentView.addChildView(
+        tab.view
+    );
 
-    const bounds = win.getBounds();
-
-    tab.view.setBounds({
-        x: 0,
-        y: 100,
-        width: bounds.width,
-        height: bounds.height - 100
-    });
+    updateBounds();
 
     activeTab = id;
 
@@ -196,9 +256,20 @@ function switchTab(id) {
     sendState(tab);
 }
 
+
+// ========================================
+// CLOSE TAB
+// ========================================
+
 function closeTab(id) {
 
-    const index = tabs.findIndex(t => t.id === id);
+    if (!win)
+        return;
+
+    const index =
+        tabs.findIndex(
+            t => t.id === id
+        );
 
     if (index === -1)
         return;
@@ -206,79 +277,161 @@ function closeTab(id) {
     const tab = tabs[index];
 
     try {
-        win.contentView.removeChildView(tab.view);
+        win.contentView.removeChildView(
+            tab.view
+        );
+    } catch {}
+
+    try {
         tab.view.webContents.close();
     } catch {}
 
     tabs.splice(index, 1);
 
+    // If all tabs were closed,
+    // create a new one
     if (tabs.length === 0) {
+
         createTab();
+
         return;
     }
 
+    // If we closed the active tab,
+    // switch to another tab
     if (activeTab === id) {
 
-        const newTab =
-            tabs[Math.max(0, index - 1)];
+        const newIndex =
+            Math.min(
+                index,
+                tabs.length - 1
+            );
 
-        switchTab(newTab.id);
+        switchTab(
+            tabs[newIndex].id
+        );
 
     } else {
+
         sendTabs();
+
     }
 }
 
+
+// ========================================
+// NAVIGATION
+// ========================================
+
 function navigate(value) {
 
-    const tab = tabs.find(t => t.id === activeTab);
+    const tab = tabs.find(
+        t => t.id === activeTab
+    );
 
     if (!tab)
         return;
 
-    let url = value.trim();
+    let input = String(value).trim();
 
-    if (!url)
+    if (!input)
         return;
 
+
+    // ------------------------------------
+    // Full URL
+    // ------------------------------------
+
     if (
-        !url.startsWith("http://") &&
-        !url.startsWith("https://") &&
-        !url.startsWith("file://")
+        input.startsWith("http://") ||
+        input.startsWith("https://") ||
+        input.startsWith("file://")
     ) {
 
-        if (
-            url.includes(".") &&
-            !url.includes(" ")
-        ) {
+        tab.url = input;
 
-            url = "https://" + url;
+        tab.view.webContents.loadURL(
+            input
+        );
 
-        } else {
+        sendState(tab);
 
-            url =
-                "https://duckduckgo.com/?q=" +
-                encodeURIComponent(url);
-
-        }
-
+        return;
     }
 
-    tab.url = url;
 
-    tab.view.webContents.loadURL(url);
+    // ------------------------------------
+    // Website without https://
+    // ------------------------------------
+
+    if (
+        input.includes(".") &&
+        !input.includes(" ")
+    ) {
+
+        const website =
+            "https://" + input;
+
+        tab.url = website;
+
+        tab.view.webContents.loadURL(
+            website
+        );
+
+        sendState(tab);
+
+        return;
+    }
+
+
+    // ------------------------------------
+    // DuckDuckGo search
+    // ------------------------------------
+
+    const searchUrl =
+        "https://duckduckgo.com/?q=" +
+        encodeURIComponent(input);
+
+    tab.url = searchUrl;
+
+    tab.view.webContents.loadURL(
+        searchUrl
+    );
 
     sendState(tab);
 }
 
+
+// ========================================
+// SEND TAB DATA TO CHROME.HTML
+// ========================================
+
 function sendTabs() {
 
-    const data = tabs.map(tab => ({
-        id: tab.id,
-        title: tab.title,
-        url: tab.url,
-        active: tab.id === activeTab
-    }));
+    if (
+        !uiView ||
+        uiView.webContents.isDestroyed()
+    ) {
+        return;
+    }
+
+    const data =
+        tabs.map(tab => ({
+
+            id: tab.id,
+
+            title:
+                tab.title ||
+                "New Tab",
+
+            url:
+                tab.url ||
+                "",
+
+            active:
+                tab.id === activeTab
+
+        }));
 
     uiView.webContents.send(
         "tabs-state",
@@ -286,140 +439,286 @@ function sendTabs() {
     );
 }
 
+
+// ========================================
+// SEND CURRENT PAGE DATA
+// ========================================
+
 function sendState(tab) {
 
-    if (!tab)
+    if (
+        !uiView ||
+        uiView.webContents.isDestroyed() ||
+        !tab
+    ) {
         return;
+    }
+
+    let currentUrl = "";
+
+    try {
+        currentUrl =
+            tab.view.webContents.getURL();
+    } catch {}
 
     uiView.webContents.send(
         "browser-state",
         {
-            url: tab.url,
-            title: tab.title
+
+            url:
+                currentUrl ||
+                tab.url ||
+                "",
+
+            title:
+                tab.title ||
+                "New Tab"
+
         }
     );
 }
 
 
-// =========================
-// IPC
-// =========================
+// ========================================
+// NEW TAB
+// ========================================
 
-ipcMain.on("new-tab", () => {
-    createTab();
-});
+ipcMain.on(
+    "new-tab",
+    () => {
 
-ipcMain.on("switch-tab", (_event, id) => {
-    switchTab(id);
-});
+        createTab();
 
-ipcMain.on("close-tab", (_event, id) => {
-    closeTab(id);
-});
-
-ipcMain.on("navigate", (_event, value) => {
-    navigate(value);
-});
+    }
+);
 
 
+// ========================================
+// SWITCH TAB
+// ========================================
+
+ipcMain.on(
+    "switch-tab",
+    (_event, id) => {
+
+        switchTab(id);
+
+    }
+);
+
+
+// ========================================
+// CLOSE TAB
+// ========================================
+
+ipcMain.on(
+    "close-tab",
+    (_event, id) => {
+
+        closeTab(id);
+
+    }
+);
+
+
+// ========================================
+// NAVIGATE
+// ========================================
+
+ipcMain.on(
+    "navigate",
+    (_event, value) => {
+
+        navigate(value);
+
+    }
+);
+
+
+// ========================================
 // BACK
-ipcMain.on("back", () => {
+// ========================================
 
-    const tab = tabs.find(t => t.id === activeTab);
+ipcMain.on(
+    "back",
+    () => {
 
-    if (
-        tab &&
-        tab.view.webContents.navigationHistory.canGoBack()
-    ) {
+        const tab =
+            tabs.find(
+                t => t.id === activeTab
+            );
 
-        tab.view.webContents.navigationHistory.goBack();
+        if (!tab)
+            return;
+
+        const history =
+            tab.view.webContents
+                .navigationHistory;
+
+        if (
+            history &&
+            history.canGoBack()
+        ) {
+
+            history.goBack();
+
+        }
 
     }
+);
 
-});
 
-
+// ========================================
 // FORWARD
-ipcMain.on("forward", () => {
+// ========================================
 
-    const tab = tabs.find(t => t.id === activeTab);
+ipcMain.on(
+    "forward",
+    () => {
 
-    if (
-        tab &&
-        tab.view.webContents.navigationHistory.canGoForward()
-    ) {
+        const tab =
+            tabs.find(
+                t => t.id === activeTab
+            );
 
-        tab.view.webContents.navigationHistory.goForward();
+        if (!tab)
+            return;
+
+        const history =
+            tab.view.webContents
+                .navigationHistory;
+
+        if (
+            history &&
+            history.canGoForward()
+        ) {
+
+            history.goForward();
+
+        }
 
     }
+);
 
-});
 
+// ========================================
+// RELOAD
+// ========================================
 
-ipcMain.on("reload", () => {
+ipcMain.on(
+    "reload",
+    () => {
 
-    const tab = tabs.find(t => t.id === activeTab);
+        const tab =
+            tabs.find(
+                t => t.id === activeTab
+            );
 
-    if (tab) {
+        if (!tab)
+            return;
+
         tab.view.webContents.reload();
+
     }
-
-});
-
-
-ipcMain.on("home", () => {
-
-    const tab = tabs.find(t => t.id === activeTab);
-
-    if (!tab)
-        return;
-
-    tab.url = HOME_PAGE;
-
-    tab.view.webContents.loadFile(
-        path.join(__dirname, "index.html")
-    );
-
-    sendState(tab);
-});
+);
 
 
-ipcMain.on("fullscreen", () => {
+// ========================================
+// HOME
+// ========================================
 
-    if (win) {
+ipcMain.on(
+    "home",
+    () => {
+
+        const tab =
+            tabs.find(
+                t => t.id === activeTab
+            );
+
+        if (!tab)
+            return;
+
+        tab.url = HOME_PAGE;
+        tab.title = "FemmBrowser";
+
+        tab.view.webContents.loadFile(
+            path.join(
+                __dirname,
+                "index.html"
+            )
+        );
+
+        sendState(tab);
+        sendTabs();
+
+    }
+);
+
+
+// ========================================
+// FULLSCREEN
+// ========================================
+
+ipcMain.on(
+    "fullscreen",
+    () => {
+
+        if (!win)
+            return;
 
         win.setFullScreen(
             !win.isFullScreen()
         );
 
     }
+);
 
-});
+
+// ========================================
+// APP READY
+// ========================================
+
+app.whenReady().then(
+    () => {
+
+        createWindow();
+
+        app.on(
+            "activate",
+            () => {
+
+                if (
+                    BaseWindow.getAllWindows()
+                        .length === 0
+                ) {
+
+                    createWindow();
+
+                }
+
+            }
+        );
+
+    }
+);
 
 
-// =========================
-// APP
-// =========================
+// ========================================
+// CLOSE ALL WINDOWS
+// ========================================
 
-app.whenReady().then(() => {
+app.on(
+    "window-all-closed",
+    () => {
 
-    createWindow();
+        if (
+            process.platform !== "darwin"
+        ) {
 
-    app.on("activate", () => {
+            app.quit();
 
-        if (BaseWindow.getAllWindows().length === 0) {
-            createWindow();
         }
 
-    });
-
-});
-
-
-app.on("window-all-closed", () => {
-
-    if (process.platform !== "darwin") {
-        app.quit();
     }
-
-});
+);
