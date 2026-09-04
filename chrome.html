@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+
+<style>
+* {
+    box-sizing: border-box;
+}
+
+html, body {
+    margin: 0;
+    width: 100%;
+    height: 100%;
+    background: #050505;
+    color: white;
+    font-family: Arial, sans-serif;
+    overflow: hidden;
+}
+
+#tabs {
+    height: 42px;
+    display: flex;
+    align-items: center;
+    background: #080808;
+    border-bottom: 1px solid #1c1c1c;
+    padding: 4px 6px 0;
+    gap: 5px;
+}
+
+.tab {
+    height: 36px;
+    min-width: 150px;
+    max-width: 230px;
+    padding: 0 12px;
+    background: #111;
+    border: 1px solid #222;
+    border-radius: 9px 9px 0 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    cursor: pointer;
+    user-select: none;
+    transition: 0.2s;
+}
+
+.tab:hover {
+    background: #181818;
+}
+
+.tab.active {
+    background: #191919;
+    border-color: #333;
+}
+
+.tab-title {
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    font-size: 13px;
+}
+
+.close {
+    margin-left: 10px;
+    opacity: 0.6;
+}
+
+.close:hover {
+    opacity: 1;
+}
+
+#newTab {
+    width: 34px;
+    height: 34px;
+    border: none;
+    background: transparent;
+    color: white;
+    font-size: 22px;
+    cursor: pointer;
+    border-radius: 50%;
+}
+
+#newTab:hover {
+    background: #1a1a1a;
+}
+
+#toolbar {
+    height: 58px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 10px;
+    background: #080808;
+    border-bottom: 1px solid #1c1c1c;
+}
+
+.toolButton {
+    width: 38px;
+    height: 38px;
+    border: none;
+    background: #111;
+    color: white;
+    border-radius: 50%;
+    font-size: 18px;
+    cursor: pointer;
+    transition: 0.15s;
+}
+
+.toolButton:hover {
+    background: #202020;
+    transform: scale(1.05);
+}
+
+#url {
+    flex: 1;
+    height: 40px;
+    background: #111;
+    border: 1px solid #252525;
+    border-radius: 22px;
+    color: white;
+    outline: none;
+    padding: 0 18px;
+    font-size: 14px;
+}
+
+#url:focus {
+    border-color: #444;
+    background: #151515;
+}
+
+#homeBtn {
+    width: 38px;
+    height: 38px;
+    border: none;
+    background: #111;
+    color: white;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 18px;
+}
+
+#homeBtn:hover {
+    background: #202020;
+}
+</style>
+</head>
+
+<body>
+
+<div id="tabs">
+    <button id="newTab">+</button>
+</div>
+
+<div id="toolbar">
+
+    <button class="toolButton" id="back">‹</button>
+    <button class="toolButton" id="forward">›</button>
+    <button class="toolButton" id="reload">↻</button>
+    <button id="homeBtn">⌂</button>
+
+    <input
+        id="url"
+        type="text"
+        placeholder="Search DuckDuckGo or enter a URL"
+    >
+
+</div>
+
+<script>
+
+const tabsContainer = document.getElementById("tabs");
+const newTabButton = document.getElementById("newTab");
+const urlBox = document.getElementById("url");
+
+newTabButton.addEventListener("click", () => {
+    window.femm.newTab();
+});
+
+document.getElementById("back").addEventListener("click", () => {
+    window.femm.back();
+});
+
+document.getElementById("forward").addEventListener("click", () => {
+    window.femm.forward();
+});
+
+document.getElementById("reload").addEventListener("click", () => {
+    window.femm.reload();
+});
+
+document.getElementById("homeBtn").addEventListener("click", () => {
+    window.femm.home();
+});
+
+urlBox.addEventListener("keydown", (event) => {
+
+    if (event.key !== "Enter")
+        return;
+
+    let value = urlBox.value.trim();
+
+    if (!value)
+        return;
+
+    window.femm.navigate(value);
+});
+
+window.femm.onTabs((tabs) => {
+
+    tabsContainer.innerHTML = "";
+
+    tabs.forEach(tab => {
+
+        const tabElement = document.createElement("div");
+
+        tabElement.className =
+            "tab" +
+            (tab.active ? " active" : "");
+
+        tabElement.innerHTML = `
+            <span class="tab-title">
+                ${tab.title || "New Tab"}
+            </span>
+
+            <span class="close">×</span>
+        `;
+
+        tabElement.addEventListener("click", (event) => {
+
+            if (event.target.classList.contains("close")) {
+
+                window.femm.closeTab(tab.id);
+
+                return;
+            }
+
+            window.femm.switchTab(tab.id);
+        });
+
+        tabsContainer.appendChild(tabElement);
+    });
+
+    tabsContainer.appendChild(newTabButton);
+});
+
+window.femm.onState((state) => {
+
+    if (state.url) {
+        urlBox.value = state.url;
+    }
+
+});
+
+</script>
+
+</body>
+</html>

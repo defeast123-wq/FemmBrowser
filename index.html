@@ -1,0 +1,1078 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FemmBrowser</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+<style>
+*{
+    box-sizing:border-box;
+}
+
+html,body{
+    margin:0;
+    width:100%;
+    height:100%;
+}
+
+body{
+    background:#000;
+    color:#fff;
+    font-family:"Inter",Arial,sans-serif;
+    overflow:hidden;
+}
+
+/* =========================
+   BACKGROUND
+========================= */
+
+.background{
+    position:fixed;
+    inset:0;
+    background:
+        radial-gradient(
+            circle at 50% -20%,
+            rgba(255,255,255,.08),
+            transparent 34%
+        ),
+        #000;
+    z-index:-20;
+}
+
+.background::after{
+    content:"";
+    position:absolute;
+    inset:0;
+    background:
+        linear-gradient(
+            115deg,
+            transparent 15%,
+            rgba(255,255,255,.012) 50%,
+            transparent 80%
+        );
+    background-size:250% 250%;
+    animation:bgMove 18s linear infinite;
+}
+
+@keyframes bgMove{
+    0%{
+        background-position:0 50%;
+    }
+
+    50%{
+        background-position:100% 50%;
+    }
+
+    100%{
+        background-position:0 50%;
+    }
+}
+
+/* =========================
+   SNOW
+========================= */
+
+#snow{
+    position:fixed;
+    inset:0;
+    overflow:hidden;
+    pointer-events:none;
+    z-index:100;
+}
+
+.snowflake{
+    position:absolute;
+    top:-30px;
+    border-radius:50%;
+    background:#fff;
+    box-shadow:
+        0 0 8px rgba(255,255,255,.45);
+    animation:snowFall linear infinite;
+}
+
+@keyframes snowFall{
+    0%{
+        transform:
+            translate3d(0,-30px,0)
+            rotate(0deg);
+        opacity:0;
+    }
+
+    10%{
+        opacity:.85;
+    }
+
+    50%{
+        transform:
+            translate3d(35px,50vh,0)
+            rotate(180deg);
+    }
+
+    100%{
+        transform:
+            translate3d(-35px,110vh,0)
+            rotate(360deg);
+        opacity:.03;
+    }
+}
+
+/* =========================
+   CUSTOM CURSOR
+========================= */
+
+.cursor-ring{
+    position:fixed;
+    width:18px;
+    height:18px;
+    border:2px solid #fff;
+    border-radius:50%;
+    pointer-events:none;
+    z-index:99999;
+    transform:translate(-50%,-50%);
+    mix-blend-mode:difference;
+    box-shadow:
+        0 0 12px rgba(255,255,255,.5),
+        0 0 28px rgba(255,255,255,.15);
+    transition:
+        width .15s ease,
+        height .15s ease,
+        background .15s ease;
+}
+
+.cursor-dot{
+    position:fixed;
+    width:5px;
+    height:5px;
+    border-radius:50%;
+    background:#fff;
+    pointer-events:none;
+    z-index:100000;
+    transform:translate(-50%,-50%);
+    mix-blend-mode:difference;
+    box-shadow:
+        0 0 10px rgba(255,255,255,.9);
+}
+
+.cursor-ring.hover{
+    width:31px;
+    height:31px;
+    background:rgba(255,255,255,.08);
+}
+
+/* =========================
+   MAIN
+========================= */
+
+.page{
+    width:100%;
+    height:100%;
+    overflow:auto;
+    scrollbar-width:thin;
+    scrollbar-color:#333 transparent;
+}
+
+.page::-webkit-scrollbar{
+    width:8px;
+}
+
+.page::-webkit-scrollbar-thumb{
+    background:#222;
+    border-radius:10px;
+}
+
+/* =========================
+   HOME
+========================= */
+
+.home{
+    min-height:100%;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:30px;
+}
+
+.home-inner{
+    width:min(900px,100%);
+    text-align:center;
+}
+
+.logo{
+    width:82px;
+    height:82px;
+    object-fit:cover;
+    border-radius:24px;
+    filter:
+        grayscale(1)
+        brightness(1.4)
+        contrast(1.1);
+    box-shadow:
+        0 0 45px rgba(255,255,255,.12);
+}
+
+.title{
+    margin-top:20px;
+    font-size:48px;
+    font-weight:800;
+    letter-spacing:-2px;
+}
+
+.title span{
+    color:#777;
+}
+
+.subtitle{
+    margin-top:8px;
+    color:#686868;
+    font-size:13px;
+}
+
+/* =========================
+   SEARCH
+========================= */
+
+.search-box{
+    width:min(720px,100%);
+    display:flex;
+    align-items:center;
+    margin:28px auto 0;
+    padding:5px;
+
+    border:
+        1px solid rgba(255,255,255,.11);
+
+    border-radius:19px;
+
+    background:
+        rgba(255,255,255,.04);
+
+    box-shadow:
+        0 25px 70px rgba(0,0,0,.55);
+
+    transition:.2s ease;
+}
+
+.search-box:focus-within{
+    border-color:
+        rgba(255,255,255,.25);
+
+    background:
+        rgba(255,255,255,.055);
+
+    box-shadow:
+        0 0 0 4px rgba(255,255,255,.02),
+        0 25px 70px rgba(0,0,0,.65);
+}
+
+.search-icon{
+    width:47px;
+    color:#777;
+    font-size:19px;
+}
+
+.search-input{
+    flex:1;
+    min-width:0;
+    height:50px;
+
+    border:0;
+    outline:0;
+
+    background:transparent;
+    color:#fff;
+
+    font-family:inherit;
+    font-size:13px;
+}
+
+.search-input::placeholder{
+    color:#555;
+}
+
+.search-submit{
+    width:50px;
+    height:50px;
+
+    border:0;
+    border-radius:14px;
+
+    background:#fff;
+    color:#000;
+
+    cursor:pointer;
+
+    font-size:18px;
+
+    transition:.2s ease;
+}
+
+.search-submit:hover{
+    transform:scale(1.04);
+}
+
+/* =========================
+   QUICK LINKS
+========================= */
+
+.quick-title{
+    margin-top:25px;
+    color:#555;
+    font-size:10px;
+    font-weight:700;
+    text-transform:uppercase;
+    letter-spacing:1.7px;
+}
+
+.quick-links{
+    display:flex;
+    justify-content:center;
+    flex-wrap:wrap;
+    gap:9px;
+    margin-top:12px;
+}
+
+.quick{
+    display:flex;
+    align-items:center;
+    gap:7px;
+
+    padding:10px 14px;
+
+    border:
+        1px solid rgba(255,255,255,.08);
+
+    border-radius:999px;
+
+    background:
+        rgba(255,255,255,.03);
+
+    color:#8d8d8d;
+
+    font-family:inherit;
+    font-size:11px;
+
+    cursor:pointer;
+
+    transition:.18s ease;
+}
+
+.quick:hover{
+    color:#fff;
+    background:
+        rgba(255,255,255,.08);
+
+    border-color:
+        rgba(255,255,255,.16);
+
+    transform:translateY(-2px);
+}
+
+/* =========================
+   BOOKMARKS
+========================= */
+
+.bookmark-section{
+    margin-top:45px;
+    text-align:left;
+}
+
+.section-title{
+    margin:0 0 14px;
+    font-size:17px;
+    font-weight:800;
+}
+
+.bookmarks{
+    display:grid;
+    grid-template-columns:
+        repeat(
+            auto-fill,
+            minmax(190px,1fr)
+        );
+    gap:10px;
+}
+
+.bookmark{
+    padding:14px;
+
+    border:
+        1px solid rgba(255,255,255,.07);
+
+    border-radius:14px;
+
+    background:
+        rgba(255,255,255,.025);
+
+    cursor:pointer;
+
+    transition:.2s ease;
+}
+
+.bookmark:hover{
+    background:
+        rgba(255,255,255,.07);
+
+    transform:translateY(-3px);
+}
+
+.bookmark-name{
+    color:#eee;
+    font-size:12px;
+    font-weight:700;
+
+    overflow:hidden;
+    white-space:nowrap;
+    text-overflow:ellipsis;
+}
+
+.bookmark-url{
+    margin-top:5px;
+    color:#5d5d5d;
+    font-size:9px;
+
+    overflow:hidden;
+    white-space:nowrap;
+    text-overflow:ellipsis;
+}
+
+/* =========================
+   SEARCH ENGINE LABEL
+========================= */
+
+.engine{
+    margin-top:17px;
+    color:#4d4d4d;
+    font-size:10px;
+}
+
+/* =========================
+   MOBILE
+========================= */
+
+@media(max-width:650px){
+
+    .home{
+        padding:20px;
+    }
+
+    .title{
+        font-size:35px;
+    }
+
+    .logo{
+        width:68px;
+        height:68px;
+    }
+
+    .bookmarks{
+        grid-template-columns:1fr;
+    }
+}
+
+</style>
+</head>
+
+<body>
+
+<div class="background"></div>
+
+<div id="snow"></div>
+
+<div
+    class="cursor-ring"
+    id="cursorRing">
+</div>
+
+<div
+    class="cursor-dot"
+    id="cursorDot">
+</div>
+
+
+<div class="page">
+
+    <div class="home">
+
+        <div class="home-inner">
+
+            <img
+                class="logo"
+                src="https://i.pinimg.com/originals/f1/3c/fb/f13cfb1c2a9e90b2376e8d1c656f7d8c.jpg?nii=t"
+                alt="Femm"
+            >
+
+
+            <div class="title">
+                Femm<span>Browser</span>
+            </div>
+
+
+            <div class="subtitle">
+                A cleaner way to browse the web.
+            </div>
+
+
+            <!-- SEARCH -->
+
+            <form
+                class="search-box"
+                id="searchForm"
+            >
+
+                <div class="search-icon">
+                    ⌕
+                </div>
+
+
+                <input
+                    class="search-input"
+                    id="searchInput"
+                    type="text"
+                    autocomplete="off"
+                    spellcheck="false"
+                    placeholder="Search DuckDuckGo or enter a URL..."
+                >
+
+
+                <button
+                    class="search-submit"
+                    type="submit"
+                >
+                    →
+                </button>
+
+            </form>
+
+
+            <div class="engine">
+                Searching with DuckDuckGo
+            </div>
+
+
+            <!-- QUICK LINKS -->
+
+            <div class="quick-title">
+                Quick access
+            </div>
+
+
+            <div class="quick-links">
+
+                <button
+                    class="quick"
+                    data-url="https://duckduckgo.com/"
+                >
+                    ◉ DuckDuckGo
+                </button>
+
+
+                <button
+                    class="quick"
+                    data-url="https://www.youtube.com/"
+                >
+                    ▶ YouTube
+                </button>
+
+
+                <button
+                    class="quick"
+                    data-url="https://github.com/"
+                >
+                    ◇ GitHub
+                </button>
+
+
+                <button
+                    class="quick"
+                    data-url="https://www.wikipedia.org/"
+                >
+                    ◈ Wikipedia
+                </button>
+
+            </div>
+
+
+            <!-- BOOKMARKS -->
+
+            <section
+                class="bookmark-section"
+                id="bookmarkSection"
+            >
+
+                <h2 class="section-title">
+                    Bookmarks
+                </h2>
+
+
+                <div
+                    class="bookmarks"
+                    id="bookmarks"
+                >
+
+                </div>
+
+            </section>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+<script>
+
+/* =====================================================
+   DUCKDUCKGO SEARCH
+===================================================== */
+
+const searchForm =
+    document.getElementById(
+        "searchForm"
+    );
+
+const searchInput =
+    document.getElementById(
+        "searchInput"
+    );
+
+
+searchForm.addEventListener(
+    "submit",
+    function(event){
+
+        event.preventDefault();
+
+        const value =
+            searchInput.value.trim();
+
+        if(!value)
+            return;
+
+
+        navigate(value);
+
+    }
+);
+
+
+/* =====================================================
+   NAVIGATION
+===================================================== */
+
+function navigate(value){
+
+    const input =
+        String(value).trim();
+
+
+    if(!input)
+        return;
+
+
+    let url;
+
+
+    /*
+       Full URLs
+    */
+
+    if(
+        /^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(
+            input
+        )
+    ){
+
+        url = input;
+
+    }
+
+
+    /*
+       Domain names
+    */
+
+    else if(
+        /^[^\s]+\.[^\s]+$/.test(
+            input
+        )
+    ){
+
+        url =
+            "https://" +
+            input;
+
+    }
+
+
+    /*
+       Everything else becomes
+       a DuckDuckGo search
+    */
+
+    else{
+
+        url =
+            "https://duckduckgo.com/?q=" +
+            encodeURIComponent(
+                input
+            );
+
+    }
+
+
+    /*
+       Normal standalone HTML mode
+       uses the current page navigation.
+    */
+
+    window.location.href =
+        url;
+
+}
+
+
+/* =====================================================
+   QUICK LINKS
+===================================================== */
+
+document
+    .querySelectorAll(
+        "[data-url]"
+    )
+    .forEach(
+        button => {
+
+            button.addEventListener(
+                "click",
+                function(){
+
+                    window.location.href =
+                        this.dataset.url;
+
+                }
+            );
+
+        }
+    );
+
+
+/* =====================================================
+   BOOKMARKS
+===================================================== */
+
+let bookmarks =
+    JSON.parse(
+        localStorage.getItem(
+            "femmBookmarks"
+        ) || "[]"
+    );
+
+
+const bookmarkContainer =
+    document.getElementById(
+        "bookmarks"
+    );
+
+
+function renderBookmarks(){
+
+    bookmarkContainer.innerHTML = "";
+
+
+    if(
+        bookmarks.length === 0
+    ){
+
+        bookmarkContainer.innerHTML = `
+
+            <div
+                style="
+                    grid-column:1/-1;
+                    padding:25px;
+                    border:1px solid rgba(255,255,255,.06);
+                    border-radius:14px;
+                    color:#555;
+                    font-size:11px;
+                    text-align:center;
+                    background:rgba(255,255,255,.02);
+                "
+            >
+                Your bookmarks will appear here.
+                <br>
+                Use the bookmark feature in the browser shell
+                to save pages.
+            </div>
+
+        `;
+
+        return;
+
+    }
+
+
+    bookmarks.forEach(
+        bookmark => {
+
+            const item =
+                document.createElement(
+                    "div"
+                );
+
+
+            item.className =
+                "bookmark";
+
+
+            item.innerHTML = `
+
+                <div class="bookmark-name">
+                    ${escapeHTML(
+                        bookmark.title ||
+                        "Bookmark"
+                    )}
+                </div>
+
+                <div class="bookmark-url">
+                    ${escapeHTML(
+                        bookmark.url
+                    )}
+                </div>
+
+            `;
+
+
+            item.onclick =
+                () =>
+                    navigate(
+                        bookmark.url
+                    );
+
+
+            bookmarkContainer.appendChild(
+                item
+            );
+
+        }
+    );
+
+}
+
+
+renderBookmarks();
+
+
+/* =====================================================
+   CUSTOM CURSOR
+===================================================== */
+
+const cursorRing =
+    document.getElementById(
+        "cursorRing"
+    );
+
+const cursorDot =
+    document.getElementById(
+        "cursorDot"
+    );
+
+
+let mouseX = 0;
+let mouseY = 0;
+
+let ringX = 0;
+let ringY = 0;
+
+let dotX = 0;
+let dotY = 0;
+
+
+document.addEventListener(
+    "mousemove",
+    function(event){
+
+        mouseX =
+            event.clientX;
+
+        mouseY =
+            event.clientY;
+
+    }
+);
+
+
+function animateCursor(){
+
+    ringX +=
+        (mouseX - ringX) *
+        0.16;
+
+
+    ringY +=
+        (mouseY - ringY) *
+        0.16;
+
+
+    dotX +=
+        (mouseX - dotX) *
+        0.38;
+
+
+    dotY +=
+        (mouseY - dotY) *
+        0.38;
+
+
+    cursorRing.style.left =
+        ringX + "px";
+
+    cursorRing.style.top =
+        ringY + "px";
+
+
+    cursorDot.style.left =
+        dotX + "px";
+
+    cursorDot.style.top =
+        dotY + "px";
+
+
+    requestAnimationFrame(
+        animateCursor
+    );
+
+}
+
+
+animateCursor();
+
+
+document.addEventListener(
+    "mouseover",
+    function(event){
+
+        if(
+            event.target.closest(
+                "button,input,.bookmark"
+            )
+        ){
+
+            cursorRing.classList.add(
+                "hover"
+            );
+
+        }
+
+    }
+);
+
+
+document.addEventListener(
+    "mouseout",
+    function(event){
+
+        if(
+            event.target.closest(
+                "button,input,.bookmark"
+            )
+        ){
+
+            cursorRing.classList.remove(
+                "hover"
+            );
+
+        }
+
+    }
+);
+
+
+/* =====================================================
+   SNOW
+===================================================== */
+
+const snow =
+    document.getElementById(
+        "snow"
+    );
+
+
+for(
+    let i = 0;
+    i < 120;
+    i++
+){
+
+    const flake =
+        document.createElement(
+            "div"
+        );
+
+
+    flake.className =
+        "snowflake";
+
+
+    const size =
+        Math.random() * 4 +
+        1.5;
+
+
+    flake.style.width =
+        size + "px";
+
+
+    flake.style.height =
+        size + "px";
+
+
+    flake.style.left =
+        Math.random() * 100 +
+        "%";
+
+
+    flake.style.animationDuration =
+        Math.random() * 10 +
+        8 +
+        "s";
+
+
+    flake.style.animationDelay =
+        Math.random() * 12 +
+        "s";
+
+
+    snow.appendChild(
+        flake
+    );
+
+}
+
+
+/* =====================================================
+   HTML ESCAPE
+===================================================== */
+
+function escapeHTML(text){
+
+    const div =
+        document.createElement(
+            "div"
+        );
+
+    div.textContent =
+        text;
+
+    return div.innerHTML;
+
+}
+
+</script>
+
+</body>
+</html>
