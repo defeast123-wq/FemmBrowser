@@ -50,10 +50,8 @@ function createWindow() {
 
     updateBounds();
 
-    // Create first tab
     createTab();
 
-    // Resize everything when window changes size
     win.on("resize", () => {
         updateBounds();
     });
@@ -76,7 +74,7 @@ function createWindow() {
 
 
 // ========================================
-// UPDATE WINDOW / TAB SIZES
+// UPDATE BOUNDS
 // ========================================
 
 function updateBounds() {
@@ -86,7 +84,6 @@ function updateBounds() {
 
     const bounds = win.getBounds();
 
-    // Toolbar
     if (uiView) {
 
         uiView.setBounds({
@@ -98,7 +95,6 @@ function updateBounds() {
 
     }
 
-    // Browser pages
     for (const tab of tabs) {
 
         tab.view.setBounds({
@@ -137,7 +133,7 @@ function createTab(url = HOME_PAGE) {
     const tab = {
         id: id,
         view: view,
-        title: "New Tab",
+        title: "FemmBrowser",
         url: url
     };
 
@@ -147,18 +143,21 @@ function createTab(url = HOME_PAGE) {
 
     updateBounds();
 
-    // Page title changed
+
+    // Page title
     view.webContents.on(
         "page-title-updated",
         (_event, title) => {
 
             tab.title =
                 title ||
-                "New Tab";
+                "FemmBrowser";
 
             sendTabs();
+
         }
     );
+
 
     // Normal navigation
     view.webContents.on(
@@ -174,6 +173,7 @@ function createTab(url = HOME_PAGE) {
         }
     );
 
+
     // In-page navigation
     view.webContents.on(
         "did-navigate-in-page",
@@ -187,6 +187,7 @@ function createTab(url = HOME_PAGE) {
 
         }
     );
+
 
     // Page finished loading
     view.webContents.on(
@@ -205,13 +206,15 @@ function createTab(url = HOME_PAGE) {
             }
 
             sendTabs();
+
         }
     );
+
 
     // Load page
     view.webContents.loadURL(url);
 
-    // Make this tab active
+    // Activate tab
     switchTab(id);
 }
 
@@ -232,7 +235,6 @@ function switchTab(id) {
     if (!tab)
         return;
 
-    // Remove browser pages
     for (const otherTab of tabs) {
 
         try {
@@ -243,7 +245,6 @@ function switchTab(id) {
 
     }
 
-    // Put selected page back
     win.contentView.addChildView(
         tab.view
     );
@@ -288,17 +289,11 @@ function closeTab(id) {
 
     tabs.splice(index, 1);
 
-    // If all tabs were closed,
-    // create a new one
     if (tabs.length === 0) {
-
         createTab();
-
         return;
     }
 
-    // If we closed the active tab,
-    // switch to another tab
     if (activeTab === id) {
 
         const newIndex =
@@ -320,7 +315,7 @@ function closeTab(id) {
 
 
 // ========================================
-// NAVIGATION
+// NAVIGATE
 // ========================================
 
 function navigate(value) {
@@ -338,10 +333,7 @@ function navigate(value) {
         return;
 
 
-    // ------------------------------------
     // Full URL
-    // ------------------------------------
-
     if (
         input.startsWith("http://") ||
         input.startsWith("https://") ||
@@ -354,16 +346,14 @@ function navigate(value) {
             input
         );
 
+        // Keep address bar as FemmBrowser
         sendState(tab);
 
         return;
     }
 
 
-    // ------------------------------------
     // Website without https://
-    // ------------------------------------
-
     if (
         input.includes(".") &&
         !input.includes(" ")
@@ -378,16 +368,14 @@ function navigate(value) {
             website
         );
 
+        // Keep address bar as FemmBrowser
         sendState(tab);
 
         return;
     }
 
 
-    // ------------------------------------
-    // DuckDuckGo search
-    // ------------------------------------
-
+    // Search DuckDuckGo
     const searchUrl =
         "https://duckduckgo.com/?q=" +
         encodeURIComponent(input);
@@ -398,12 +386,13 @@ function navigate(value) {
         searchUrl
     );
 
+    // Keep address bar as FemmBrowser
     sendState(tab);
 }
 
 
 // ========================================
-// SEND TAB DATA TO CHROME.HTML
+// SEND TABS
 // ========================================
 
 function sendTabs() {
@@ -422,7 +411,7 @@ function sendTabs() {
 
             title:
                 tab.title ||
-                "New Tab",
+                "FemmBrowser",
 
             url:
                 tab.url ||
@@ -441,7 +430,7 @@ function sendTabs() {
 
 
 // ========================================
-// SEND CURRENT PAGE DATA
+// SEND STATE
 // ========================================
 
 function sendState(tab) {
@@ -454,26 +443,16 @@ function sendState(tab) {
         return;
     }
 
-    let currentUrl = "";
-
-    try {
-        currentUrl =
-            tab.view.webContents.getURL();
-    } catch {}
-
+    // IMPORTANT:
+    // Always send "FemmBrowser" to the
+    // address bar instead of the real URL.
     uiView.webContents.send(
         "browser-state",
         {
-
-            url:
-                currentUrl ||
-                tab.url ||
-                "",
-
+            url: "FemmBrowser",
             title:
                 tab.title ||
-                "New Tab"
-
+                "FemmBrowser"
         }
     );
 }
@@ -705,7 +684,7 @@ app.whenReady().then(
 
 
 // ========================================
-// CLOSE ALL WINDOWS
+// CLOSE APP
 // ========================================
 
 app.on(
