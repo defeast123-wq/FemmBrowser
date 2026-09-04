@@ -59,9 +59,11 @@ function createWindow() {
     win.on("closed", () => {
 
         for (const tab of tabs) {
+
             try {
                 tab.view.webContents.close();
             } catch {}
+
         }
 
         tabs.length = 0;
@@ -149,12 +151,11 @@ function createTab(url = HOME_PAGE) {
         "page-title-updated",
         (_event, title) => {
 
-            tab.title =
-                title ||
-                "FemmBrowser";
+            if (title) {
+                tab.title = title;
+            }
 
             sendTabs();
-
         }
     );
 
@@ -189,32 +190,33 @@ function createTab(url = HOME_PAGE) {
     );
 
 
-    // Page finished loading
+    // Finished loading
     view.webContents.on(
         "did-finish-load",
         () => {
 
-            const currentUrl =
-                view.webContents.getURL();
+            try {
 
-            if (currentUrl) {
-                tab.url = currentUrl;
-            }
+                const currentUrl =
+                    view.webContents.getURL();
+
+                if (currentUrl) {
+                    tab.url = currentUrl;
+                }
+
+            } catch {}
 
             if (tab.id === activeTab) {
                 sendState(tab);
             }
 
             sendTabs();
-
         }
     );
 
 
-    // Load page
     view.webContents.loadURL(url);
 
-    // Activate tab
     switchTab(id);
 }
 
@@ -228,12 +230,12 @@ function switchTab(id) {
     if (!win)
         return;
 
-    const tab = tabs.find(
-        t => t.id === id
-    );
+    const tab =
+        tabs.find(t => t.id === id);
 
     if (!tab)
         return;
+
 
     for (const otherTab of tabs) {
 
@@ -244,6 +246,7 @@ function switchTab(id) {
         } catch {}
 
     }
+
 
     win.contentView.addChildView(
         tab.view
@@ -277,22 +280,29 @@ function closeTab(id) {
 
     const tab = tabs[index];
 
+
     try {
         win.contentView.removeChildView(
             tab.view
         );
     } catch {}
 
+
     try {
         tab.view.webContents.close();
     } catch {}
 
+
     tabs.splice(index, 1);
 
+
     if (tabs.length === 0) {
+
         createTab();
+
         return;
     }
+
 
     if (activeTab === id) {
 
@@ -315,25 +325,57 @@ function closeTab(id) {
 
 
 // ========================================
-// NAVIGATE
+// NAVIGATION
 // ========================================
 
 function navigate(value) {
 
-    const tab = tabs.find(
-        t => t.id === activeTab
-    );
+    const tab =
+        tabs.find(
+            t => t.id === activeTab
+        );
 
     if (!tab)
         return;
 
-    let input = String(value).trim();
+    const input =
+        String(value).trim();
 
     if (!input)
         return;
 
 
-    // Full URL
+    // ====================================
+    // HOME
+    // ====================================
+
+    if (
+        input.toLowerCase() ===
+        "femmbrowser"
+    ) {
+
+        tab.url = HOME_PAGE;
+
+        tab.title = "FemmBrowser";
+
+        tab.view.webContents.loadFile(
+            path.join(
+                __dirname,
+                "index.html"
+            )
+        );
+
+        sendState(tab);
+        sendTabs();
+
+        return;
+    }
+
+
+    // ====================================
+    // FULL URL
+    // ====================================
+
     if (
         input.startsWith("http://") ||
         input.startsWith("https://") ||
@@ -346,14 +388,17 @@ function navigate(value) {
             input
         );
 
-        // Keep address bar as FemmBrowser
+        // Keep toolbar branded
         sendState(tab);
 
         return;
     }
 
 
-    // Website without https://
+    // ====================================
+    // WEBSITE WITHOUT HTTPS
+    // ====================================
+
     if (
         input.includes(".") &&
         !input.includes(" ")
@@ -368,25 +413,32 @@ function navigate(value) {
             website
         );
 
-        // Keep address bar as FemmBrowser
+        // Keep toolbar branded
         sendState(tab);
 
         return;
     }
 
 
-    // Search DuckDuckGo
+    // ====================================
+    // DUCKDUCKGO SEARCH
+    // ====================================
+
     const searchUrl =
         "https://duckduckgo.com/?q=" +
         encodeURIComponent(input);
 
     tab.url = searchUrl;
 
+    tab.title = "FemmBrowser";
+
     tab.view.webContents.loadURL(
         searchUrl
     );
 
-    // Keep address bar as FemmBrowser
+    // VERY IMPORTANT:
+    // The toolbar will still display
+    // "FemmBrowser".
     sendState(tab);
 }
 
@@ -410,12 +462,10 @@ function sendTabs() {
             id: tab.id,
 
             title:
-                tab.title ||
                 "FemmBrowser",
 
             url:
-                tab.url ||
-                "",
+                tab.url || "",
 
             active:
                 tab.id === activeTab
@@ -443,16 +493,16 @@ function sendState(tab) {
         return;
     }
 
-    // IMPORTANT:
-    // Always send "FemmBrowser" to the
-    // address bar instead of the real URL.
+
+    // ====================================
+    // ALWAYS SHOW FEMMBROWSER
+    // ====================================
+
     uiView.webContents.send(
         "browser-state",
         {
             url: "FemmBrowser",
-            title:
-                tab.title ||
-                "FemmBrowser"
+            title: "FemmBrowser"
         }
     );
 }
@@ -619,6 +669,7 @@ ipcMain.on(
             return;
 
         tab.url = HOME_PAGE;
+
         tab.title = "FemmBrowser";
 
         tab.view.webContents.loadFile(
